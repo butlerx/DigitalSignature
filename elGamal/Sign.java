@@ -22,13 +22,13 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 */
 
+import java.io.*;
 import java.math.BigInteger;
+import java.nio.file.*;
+import java.security.*;
+import java.util.*;
 import javax.crypto.*;
 import javax.crypto.spec.*;
-import java.security.*;
-import java.io.*;
-import java.nio.file.*;
-import java.util.*;
 
 class Key {
 
@@ -45,7 +45,7 @@ class Key {
       x = new BigInteger(keyLen, sec);
       // Public key y = g^x (mod p)
       y = g.modPow(x, p);
-    } catch(FileNotFoundException e) {
+    } catch (FileNotFoundException e) {
       throw e;
     }
   }
@@ -78,8 +78,7 @@ public class Sign {
     BigInteger temp1, temp2;
     BigInteger bi = BigInteger.ZERO;
     BigInteger bj = BigInteger.ONE;
-    if (m == BigInteger.ONE)
-      return BigInteger.ZERO;
+    if (m == BigInteger.ONE) return BigInteger.ZERO;
     while (a.compareTo(BigInteger.ONE) == 1) {
       temp1 = a.divide(mod);
       temp2 = mod;
@@ -89,8 +88,7 @@ public class Sign {
       bi = bj.subtract(temp1.multiply(bi));
       bj = temp2;
     }
-    if (bj.compareTo(BigInteger.ZERO) == -1)
-      bj = bj.add(m);
+    if (bj.compareTo(BigInteger.ZERO) == -1) bj = bj.add(m);
     return bj;
   }
 
@@ -102,9 +100,9 @@ public class Sign {
     BigInteger temp = p.subtract(BigInteger.ONE);
     int keyLen = p.bitLength() - 1;
 
-    while(s.equals(BigInteger.ZERO)) {
+    while (s.equals(BigInteger.ZERO)) {
       BigInteger k = BigInteger.ZERO;
-      while(!k.equals(BigInteger.ONE)) {
+      while (!k.equals(BigInteger.ONE)) {
         SecureRandom sec_r = new SecureRandom();
         k = new BigInteger(keyLen, sec_r);
         k = gcd(k, temp);
@@ -115,23 +113,20 @@ public class Sign {
       try {
         s = s.multiply(modInverse(k, temp));
         s = s.mod(temp);
-      }
-      catch(ArithmeticException e) {
+      } catch (ArithmeticException e) {
         s = BigInteger.ZERO;
       }
     }
   }
 
   public static boolean inBounds(Key key) {
-    return (
-      (r.compareTo(BigInteger.ZERO) == 1) &
-      (r.compareTo(key.modulus()) == -1) &
-      (s.compareTo(BigInteger.ZERO) == 1) &
-      (s.compareTo(key.modulus().subtract(BigInteger.ONE)) == -1)
-    );
+    return ((r.compareTo(BigInteger.ZERO) == 1)
+        & (r.compareTo(key.modulus()) == -1)
+        & (s.compareTo(BigInteger.ZERO) == 1)
+        & (s.compareTo(key.modulus().subtract(BigInteger.ONE)) == -1));
   }
 
-  public static boolean verify(Key key, byte [] digest) {
+  public static boolean verify(Key key, byte[] digest) {
     BigInteger left = key.generator().modPow(new BigInteger(digest), key.modulus());
     BigInteger bi = key.publicKey().modPow(r, key.modulus());
     BigInteger bj = r.modPow(s, key.modulus());
@@ -140,14 +135,14 @@ public class Sign {
     return (left.equals(right));
   }
 
-  public static void main (final String[] args) {
+  public static void main(final String[] args) {
     try {
       Key key = new Key();
       Path path = Paths.get(args[0]);
       byte[] message = Files.readAllBytes(path);
       MessageDigest md = MessageDigest.getInstance("SHA-256");
       md.update(message);
-      byte [] digest = md.digest();
+      byte[] digest = md.digest();
       genRS(key, digest);
       if (inBounds(key) & verify(key, digest)) {
         prettyPrint("Private Key", key.privateKey().toString(16));
@@ -166,10 +161,10 @@ public class Sign {
   }
 
   private static void prettyPrint(String var, String hex) {
-    StringBuilder builder = new StringBuilder(hex.length() + 1 * (hex.length()/8)+1);
+    StringBuilder builder = new StringBuilder(hex.length() + 1 * (hex.length() / 8) + 1);
     String prefix = "";
     int block = 0;
-    for (int i = 0; i < hex.length(); i+=8) {
+    for (int i = 0; i < hex.length(); i += 8) {
       if (block % 8 == 0) {
         builder.append("\n");
       } else {
@@ -180,10 +175,9 @@ public class Sign {
       block++;
     }
     var = " " + var + " ";
-    String padding = String.format("%0" + ((71 -var.length())/2) + "d", 0).replace("0","=");
+    String padding = String.format("%0" + ((71 - var.length()) / 2) + "d", 0).replace("0", "=");
     System.out.println(padding + var + padding + "\n" + builder.toString() + "\n");
   }
-
 }
 
 class FS {
@@ -195,15 +189,16 @@ class FS {
       StringBuffer fileData = new StringBuffer();
       BufferedReader reader = new BufferedReader(new FileReader(filePath));
       char[] buf = new char[1024];
-      int numRead=0;
-      while((numRead=reader.read(buf)) != -1){
+      int numRead = 0;
+      while ((numRead = reader.read(buf)) != -1) {
         String readData = String.valueOf(buf, 0, numRead);
         fileData.append(readData);
       }
       reader.close();
-      String file = fileData.toString().replaceAll("\\s","").replaceAll("\\n", "").replaceAll("\\r", "");
+      String file =
+          fileData.toString().replaceAll("\\s", "").replaceAll("\\n", "").replaceAll("\\r", "");
       return new BigInteger(file, 16);
-    } catch(IOException e) {
+    } catch (IOException e) {
       throw e;
     }
   }
